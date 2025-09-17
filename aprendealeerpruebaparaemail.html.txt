@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprender a Leer</title>
+    <!-- Incluye el CDN de Tailwind CSS para un estilo rápido y responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo para que la aplicación ocupe toda la pantalla y sea un lienzo de juego */
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Oculta las pantallas por defecto */
+        .content-screen {
+            display: none;
+        }
+
+        .content-screen.active {
+            display: flex;
+        }
+
+        /* Oculta los botones en la pantalla de inicio */
+        #home-screen.active .nav-button {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center h-full">
+
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app-container" class="relative w-full h-full flex flex-col items-center justify-center">
+
+        <!-- Pantalla de Inicio -->
+        <div id="home-screen" class="content-screen active flex-col items-center justify-center transition-all duration-300">
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight">Aprender a leer</h1>
+            <button onclick="navigate(1)" class="mt-8 px-8 py-4 bg-green-500 text-white rounded-full font-bold shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                Empezar
+            </button>
+        </div>
+
+        <!-- Pantalla de Contenido (letras y sílabas) -->
+        <div id="content-screen" class="content-screen flex-col items-center justify-center transition-all duration-300">
+            <!-- Emoji o imagen (ahora en la parte superior) -->
+            <div id="display-emoji" class="text-[12rem] mb-4 select-none">✈️</div>
+            <!-- Texto descriptivo -->
+            <p id="description-text" class="text-3xl font-semibold text-center mt-4">A de Avión</p>
+            <!-- Letra o sílaba (ahora en la parte inferior) -->
+            <h2 id="display-text" class="text-9xl font-black mb-8 select-none">A</h2>
+        </div>
+
+        <!-- Botones de navegación (ocultos en la pantalla de inicio) -->
+        <div class="fixed bottom-0 w-full p-4 flex justify-between items-center transition-opacity duration-300" id="nav-buttons-container">
+            <!-- Botón de retroceder -->
+            <button id="prev-button" onclick="navigate(-1)" class="p-4 bg-purple-500 text-white rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                <span class="text-3xl">⬅️</span>
+            </button>
+            <!-- Botón de avanzar -->
+            <button id="next-button" onclick="navigate(1)" class="p-4 bg-purple-500 text-white rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                <span class="text-3xl">➡️</span>
+            </button>
+        </div>
+        
+        <!-- Botón de audio (ahora en la esquina superior derecha) -->
+        <button id="audio-button" class="fixed top-4 right-4 p-6 bg-blue-500 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center opacity-0" disabled>
+            <span id="audio-icon" class="text-3xl">🔊</span>
+            <span id="audio-loading" class="hidden text-sm ml-2">Cargando...</span>
+        </button>
+
+    </div>
+
+    <script>
+        // Array de datos con el contenido de cada pantalla.
+        const contentData = [
+            // Vocales
+            { letter: 'A', emoji: '✈️', description: 'A de Avión', bgColor: 'bg-indigo-600' },
+            { letter: 'E', emoji: '🐘', description: 'E de Elefante', bgColor: 'bg-teal-600' },
+            { letter: 'I', emoji: '🏝️', description: 'I de Isla', bgColor: 'bg-rose-600' },
+            { letter: 'O', emoji: '🐻', description: 'O de Oso', bgColor: 'bg-orange-600' },
+            { letter: 'U', emoji: '🍇', description: 'U de Uvas', bgColor: 'bg-emerald-600' },
+            // Consonantes
+            { letter: 'B', emoji: '🐳', description: 'B de Ballena', bgColor: 'bg-pink-600' },
+            { letter: 'C', emoji: '🐇', description: 'C de Conejo', bgColor: 'bg-fuchsia-600' },
+            { letter: 'D', emoji: '🐬', description: 'D de Delfín', bgColor: 'bg-lime-600' },
+            { letter: 'F', emoji: '🦭', description: 'F de Foca', bgColor: 'bg-cyan-600' },
+            { letter: 'G', emoji: '🐈', description: 'G de Gato', bgColor: 'bg-orange-600' },
+            { letter: 'H', emoji: '🍦', description: 'H de Helado', bgColor: 'bg-purple-600' },
+            { letter: 'J', emoji: '🦒', description: 'J de Jirafa', bgColor: 'bg-teal-600' },
+            { letter: 'K', emoji: '🐨', description: 'K de Koala', bgColor: 'bg-pink-600' },
+            { letter: 'L', emoji: '🦁', description: 'L de León', bgColor: 'bg-lime-600' },
+            { letter: 'M', emoji: '🐒', description: 'M de Mono', bgColor: 'bg-rose-600' },
+            { letter: 'N', emoji: '🍊', description: 'N de Naranja', bgColor: 'bg-amber-600' },
+            { letter: 'Ñ', emoji: '🦩', description: 'Ñ de Ñandú', bgColor: 'bg-fuchsia-600' },
+            { letter: 'P', emoji: '🐕', description: 'P de Perro', bgColor: 'bg-indigo-600' },
+            { letter: 'Q', emoji: '🧀', description: 'Q de Queso', bgColor: 'bg-cyan-600' },
+            { letter: 'R', emoji: '🐭', description: 'R de Ratón', bgColor: 'bg-emerald-600' },
+            { letter: 'S', emoji: '☀️', description: 'S de Sol', bgColor: 'bg-yellow-600' },
+            { letter: 'T', emoji: '🐅', description: 'T de Tigre', bgColor: 'bg-rose-600' },
+            { letter: 'V', emoji: '🐄', description: 'V de Vaca', bgColor: 'bg-teal-600' },
+            { letter: 'W', emoji: '🦡', description: 'W de Wombat', bgColor: 'bg-indigo-600' },
+            { letter: 'X', emoji: '🎹', description: 'X de Xilófono', bgColor: 'bg-amber-600' },
+            { letter: 'Y', emoji: '🪀', description: 'Y de Yoyo', bgColor: 'bg-purple-600' },
+            { letter: 'Z', emoji: '🦊', description: 'Z de Zorro', bgColor: 'bg-lime-600' },
+            // Sílabas
+            { letter: 'MA', emoji: '🍎', description: 'MA de Manzana', bgColor: 'bg-red-600' },
+            { letter: 'ME', emoji: '🪑', description: 'ME de Mesa', bgColor: 'bg-blue-600' },
+            { letter: 'MI', emoji: '🎤', description: 'MI de Micrófono', bgColor: 'bg-yellow-600' },
+            { letter: 'MO', emoji: '🛵', description: 'MO de Moto', bgColor: 'bg-pink-600' },
+            { letter: 'MU', emoji: '🦇', description: 'MU de Murciélago', bgColor: 'bg-gray-600' },
+            { letter: 'PA', emoji: '🦆', description: 'PA de Pato', bgColor: 'bg-sky-600' },
+            { letter: 'PE', emoji: '⚽', description: 'PE de Pelota', bgColor: 'bg-green-600' },
+            { letter: 'PI', emoji: '🌲', description: 'PI de Pino', bgColor: 'bg-lime-600' },
+            { letter: 'PO', emoji: '🐔', description: 'PO de Pollo', bgColor: 'bg-amber-600' },
+            { letter: 'PU', emoji: '🚪', description: 'PU de Puerta', bgColor: 'bg-purple-600' },
+            { letter: 'LA', emoji: '✏️', description: 'LA de Lápiz', bgColor: 'bg-orange-600' },
+            { letter: 'LE', emoji: '🥛', description: 'LE de Leche', bgColor: 'bg-indigo-600' },
+            { letter: 'LI', emoji: '📖', description: 'LI de Libro', bgColor: 'bg-fuchsia-600' },
+            { letter: 'LO', emoji: '🦜', description: 'LO de Loro', bgColor: 'bg-teal-600' },
+            { letter: 'LU', emoji: '🌙', description: 'LU de Luna', bgColor: 'bg-slate-600' },
+            { letter: 'SA', emoji: '🍉', description: 'SA de Sandía', bgColor: 'bg-red-600' },
+            { letter: 'SE', emoji: '🚦', description: 'SE de Semaforo', bgColor: 'bg-amber-600' },
+            { letter: 'SI', emoji: '🪑', description: 'SI de Silla', bgColor: 'bg-lime-600' },
+            { letter: 'SO', emoji: '☀️', description: 'SO de Sol', bgColor: 'bg-yellow-600' },
+            { letter: 'SU', emoji: '➕', description: 'SU de Sumar', bgColor: 'bg-indigo-600' },
+            { letter: 'TA', emoji: '☕', description: 'TA de Tasa', bgColor: 'bg-rose-600' },
+            { letter: 'TE', emoji: '📞', description: 'TE de Teléfono', bgColor: 'bg-cyan-600' },
+            { letter: 'TI', emoji: '🦈', description: 'TI de Tiburón', bgColor: 'bg-blue-600' },
+            { letter: 'TO', emoji: '🐂', description: 'TO de Toro', bgColor: 'bg-green-600' },
+            { letter: 'TU', emoji: '🚰', description: 'TU de Tubo', bgColor: 'bg-orange-600' },
+            { letter: 'BA', emoji: '⛵', description: 'BA de Barco', bgColor: 'bg-sky-600' },
+            { letter: 'BO', emoji: '🍾', description: 'BO de Botella', bgColor: 'bg-emerald-600' },
+            { letter: 'CA', emoji: '🏠', description: 'CA de Casa', bgColor: 'bg-fuchsia-600' },
+            { letter: 'CO', emoji: '🐇', description: 'CO de Conejo', bgColor: 'bg-purple-600' },
+            { letter: 'DA', emoji: '🎲', description: 'DA de Dado', bgColor: 'bg-pink-600' },
+            { letter: 'DE', emoji: '👉', description: 'DE de Dedo', bgColor: 'bg-teal-600' },
+            { letter: 'GA', emoji: '🐈', description: 'GA de Gato', bgColor: 'bg-rose-600' },
+            { letter: 'GO', emoji: '🧢', description: 'GO de Gorra', bgColor: 'bg-yellow-600' },
+            { letter: 'NA', emoji: '🍊', description: 'NA de Naranja', bgColor: 'bg-amber-600' },
+            { letter: 'NE', emoji: '👶', description: 'NE de Nene', bgColor: 'bg-cyan-600' },
+            { letter: 'FA', emoji: '👻', description: 'FA de Fantasma', bgColor: 'bg-indigo-600' },
+            { letter: 'FE', emoji: '🎠', description: 'FE de Feria', bgColor: 'bg-lime-600' },
+            { letter: 'JA', emoji: '🏺', description: 'JA de Jarra', bgColor: 'bg-blue-600' },
+            { letter: 'JO', emoji: '💎', description: 'JO de Joya', bgColor: 'bg-green-600' },
+            { letter: 'RA', emoji: '🐸', description: 'RA de Rana', bgColor: 'bg-red-600' },
+            { letter: 'RO', emoji: '🌹', description: 'RO de Rosa', bgColor: 'bg-pink-600' }
+        ];
+
+        let currentIndex = 0;
+        const homeScreen = document.getElementById('home-screen');
+        const contentScreen = document.getElementById('content-screen');
+        const navButtonsContainer = document.getElementById('nav-buttons-container');
+        const audioButtonContainer = document.getElementById('audio-button');
+        const displayText = document.getElementById('display-text');
+        const displayEmoji = document.getElementById('display-emoji');
+        const descriptionText = document.getElementById('description-text');
+        const audioIcon = document.getElementById('audio-icon');
+        const audioLoading = document.getElementById('audio-loading');
+        const appContainer = document.getElementById('app-container');
+
+        // Función para actualizar la UI con el contenido del índice actual
+        function updateScreen() {
+            if (currentIndex === 0) {
+                // Volver a la pantalla de inicio
+                homeScreen.classList.add('active');
+                contentScreen.classList.remove('active');
+                navButtonsContainer.classList.remove('opacity-100');
+                navButtonsContainer.classList.add('opacity-0');
+                audioButtonContainer.classList.remove('opacity-100');
+                audioButtonContainer.classList.add('opacity-0');
+                audioButtonContainer.disabled = true;
+            } else {
+                // Navegar a la pantalla de contenido
+                homeScreen.classList.remove('active');
+                contentScreen.classList.add('active');
+                navButtonsContainer.classList.add('opacity-100');
+                navButtonsContainer.classList.remove('opacity-0');
+                audioButtonContainer.classList.add('opacity-100');
+                audioButtonContainer.classList.remove('opacity-0');
+                audioButtonContainer.disabled = false;
+
+                const data = contentData[currentIndex - 1]; // -1 porque el índice 0 es la pantalla de inicio
+                displayText.textContent = data.letter;
+                displayEmoji.textContent = data.emoji;
+                descriptionText.textContent = data.description;
+                appContainer.style.backgroundColor = data.bgColor;
+            }
+        }
+
+        // Función de navegación
+        function navigate(direction) {
+            if (direction === 1) {
+                currentIndex++;
+                if (currentIndex > contentData.length) {
+                    currentIndex = 0; // Vuelve a la pantalla de inicio
+                }
+            } else if (direction === -1) {
+                currentIndex--;
+                if (currentIndex < 0) {
+                    currentIndex = contentData.length; // Vuelve al final
+                }
+            }
+            updateScreen();
+        }
+
+        // Función para convertir Base64 a ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Función para convertir datos PCM a formato WAV
+        function pcmToWav(pcmData, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            function writeString(str) {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset++, str.charCodeAt(i));
+                }
+            }
+
+            function writeUint32(val) {
+                view.setUint32(offset, val, true);
+                offset += 4;
+            }
+
+            function writeUint16(val) {
+                view.setUint16(offset, val, true);
+                offset += 2;
+            }
+
+            // RIFF header
+            writeString('RIFF');
+            writeUint32(36 + pcmData.length * 2);
+            writeString('WAVE');
+
+            // fmt chunk
+            writeString('fmt ');
+            writeUint32(16);
+            writeUint16(1); // Audio format (1 = PCM)
+            writeUint16(1); // Channels (1 = mono)
+            writeUint32(sampleRate);
+            writeUint32(sampleRate * 2); // Byte rate
+            writeUint16(2); // Block align
+            writeUint16(16); // Bits per sample
+
+            // data chunk
+            writeString('data');
+            writeUint32(pcmData.length * 2);
+            
+            // Write PCM data
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(offset, pcmData[i], true);
+                offset += 2;
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+
+        // Configuración del botón de audio
+        audioButtonContainer.addEventListener('click', async () => {
+            const textToSpeak = descriptionText.textContent;
+            console.log('Texto a hablar:', textToSpeak);
+
+            audioIcon.classList.add('hidden');
+            audioLoading.classList.remove('hidden');
+            audioButtonContainer.disabled = true;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: textToSpeak }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Zephyr" }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (sampleRateMatch) {
+                        const sampleRate = parseInt(sampleRateMatch[1], 10);
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+
+                        audio.addEventListener('ended', () => {
+                            URL.revokeObjectURL(audioUrl);
+                        });
+                    }
+                } else {
+                    console.error('Error: No se encontraron datos de audio en la respuesta.');
+                }
+            } catch (error) {
+                console.error('Error al generar el audio:', error);
+            } finally {
+                audioIcon.classList.remove('hidden');
+                audioLoading.classList.add('hidden');
+                audioButtonContainer.disabled = false;
+            }
+        });
+
+        // Inicializa la primera pantalla al cargar
+        window.onload = updateScreen;
+    </script>
+</body>
+</html>
